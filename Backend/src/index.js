@@ -23,7 +23,7 @@ app.use(express.json({ limit: '10mb' })) // 10mb for large overview texts
 app.use(cors({
   origin: [
     'http://localhost:5173',           // Vite dev server
-    'https://studyos.vercel.app',      // your production frontend
+    'https://zeno-frontend-ruby.vercel.app',      // your production frontend
     /\.vercel\.app$/                   // any vercel preview URL
   ],
   credentials: true

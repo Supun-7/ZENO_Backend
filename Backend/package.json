@@ -2,7 +2,7 @@
   "name": "zeno-backend",
   "version": "3.0.0",
   "type": "module",
-  "main": "src/index.js",
+  "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js"

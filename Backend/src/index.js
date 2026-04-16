@@ -11,14 +11,30 @@ const app  = express()
 const PORT = process.env.PORT || 3001
 
 app.use(express.json({ limit: '10mb' }))
+
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://zeno-frontend-ruby.vercel.app'
+]
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    /\.vercel\.app$/,
-    /\.railway\.app$/
-  ],
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true)
+
+    if (
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.railway.app')
+    ) {
+      return callback(null, true)
+    }
+
+    return callback(new Error('Not allowed by CORS'))
+  },
   credentials: true
 }))
+
+app.options('*', cors()) // ✅ handle preflight
 
 app.use('/api/profile',  profileRoutes)
 app.use('/api/modules',  moduleRoutes)
@@ -36,7 +52,7 @@ app.use((req, res) =>
 
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err)
-  res.status(500).json({ error: 'Internal server error' })
+  res.status(500).json({ error: err.message || 'Internal server error' })
 })
 
 app.listen(PORT, () => console.log(`Zeno backend v3 running on port ${PORT}`))

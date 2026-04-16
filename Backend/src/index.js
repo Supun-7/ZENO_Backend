@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import profileRoutes  from './routes/profile.js'
 import moduleRoutes   from './routes/modules.js'
+import planRoutes     from './routes/plan.js'
 import slotRoutes     from './routes/slots.js'
 import sessionRoutes  from './routes/sessions.js'
 
@@ -21,15 +22,21 @@ app.use(cors({
 
 app.use('/api/profile',  profileRoutes)
 app.use('/api/modules',  moduleRoutes)
+app.use('/api/plan',     planRoutes)
 app.use('/api/slots',    slotRoutes)
 app.use('/api/sessions', sessionRoutes)
 
-app.get('/health', (_, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }))
+app.get('/health', (_, res) =>
+  res.json({ status: 'ok', version: '3.0', timestamp: new Date().toISOString() })
+)
 
-app.use((req, res) => res.status(404).json({ error: `Route ${req.method} ${req.path} not found` }))
+app.use((req, res) =>
+  res.status(404).json({ error: `${req.method} ${req.path} not found` })
+)
+
 app.use((err, req, res, next) => {
-  console.error(err)
+  console.error('Unhandled error:', err)
   res.status(500).json({ error: 'Internal server error' })
 })
 
-app.listen(PORT, () => console.log(`StudyOS backend v2 running on port ${PORT}`))
+app.listen(PORT, () => console.log(`Zeno backend v3 running on port ${PORT}`))

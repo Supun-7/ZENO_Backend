@@ -18,19 +18,19 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const { name, credits, midMark, midWeight, confidenceRating, overviewText, color, displayOrder } = req.body
-  if (!name) return res.status(400).json({ error: 'Module name required' })
+  if (!name?.trim()) return res.status(400).json({ error: 'Module name required' })
 
   const { data, error } = await supabase
     .from('modules')
     .insert({
       device_id:         req.deviceId,
-      name,
+      name:              name.trim(),
       credits:           parseFloat(credits) || 3,
       mid_mark:          midMark != null && midMark !== '' ? parseFloat(midMark) : null,
       mid_weight:        parseFloat(midWeight) || 30,
       confidence_rating: parseInt(confidenceRating) || 3,
-      overview_text:     overviewText || null,
-      color:             color || '#00ff88',
+      overview_text:     overviewText?.trim() || null,
+      color:             color || '#7C9E87',
       display_order:     displayOrder || 0
     })
     .select()
@@ -41,15 +41,11 @@ router.post('/', async (req, res) => {
 })
 
 router.patch('/:id', async (req, res) => {
-  const { name, credits, midMark, midWeight, confidenceRating, overviewText, color } = req.body
+  const fields = { name:'name', credits:'credits', midMark:'mid_mark', midWeight:'mid_weight', confidenceRating:'confidence_rating', overviewText:'overview_text', color:'color' }
   const updates = {}
-  if (name !== undefined)             updates.name              = name
-  if (credits !== undefined)          updates.credits           = parseFloat(credits)
-  if (midMark !== undefined)          updates.mid_mark          = midMark !== '' ? parseFloat(midMark) : null
-  if (midWeight !== undefined)        updates.mid_weight        = parseFloat(midWeight)
-  if (confidenceRating !== undefined) updates.confidence_rating = parseInt(confidenceRating)
-  if (overviewText !== undefined)     updates.overview_text     = overviewText
-  if (color !== undefined)            updates.color             = color
+  Object.entries(fields).forEach(([k, dbk]) => {
+    if (req.body[k] !== undefined) updates[dbk] = req.body[k]
+  })
 
   const { data, error } = await supabase
     .from('modules')
@@ -63,21 +59,14 @@ router.patch('/:id', async (req, res) => {
   res.json(data)
 })
 
+// Trigger AI analysis on a single module
 router.post('/:id/analyze', async (req, res) => {
-  const { data: mod, error } = await supabase
-    .from('modules')
-    .select('*')
-    .eq('id', req.params.id)
-    .eq('device_id', req.deviceId)
-    .single()
-
-  if (error || !mod) return res.status(404).json({ error: 'Module not found' })
+  const { data: mod } = await supabase
+    .from('modules').select('*').eq('id', req.params.id).eq('device_id', req.deviceId).single()
+  if (!mod) return res.status(404).json({ error: 'Module not found' })
 
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('device_id', req.deviceId)
-    .single()
+    .from('profiles').select('*').eq('device_id', req.deviceId).single()
 
   const weeksLeft = profile?.exam_date
     ? Math.max(1, Math.ceil((new Date(profile.exam_date) - new Date()) / (1000*60*60*24*7)))
@@ -85,37 +74,30 @@ router.post('/:id/analyze', async (req, res) => {
 
   try {
     const result = await analyzeModuleOverview({
-      name:             mod.name,
-      credits:          mod.credits,
-      midMark:          mod.mid_mark,
-      midWeight:        mod.mid_weight,
+      name: mod.name, credits: mod.credits,
+      midMark: mod.mid_mark, midWeight: mod.mid_weight,
       confidenceRating: mod.confidence_rating,
-      overviewText:     mod.overview_text,
-      targetGrade:      profile?.target_grade || 'A',
+      overviewText: mod.overview_text,
+      targetGrade: profile?.target_grade || 'A',
       weeksLeft
     })
 
     const { data: updated } = await supabase
       .from('modules')
       .update({ topics: result.topics, recommended_hours: result.recommendedHours })
-      .eq('id', req.params.id)
-      .eq('device_id', req.deviceId)
-      .select()
-      .single()
+      .eq('id', req.params.id).eq('device_id', req.deviceId)
+      .select().single()
 
     res.json(updated)
   } catch (err) {
-    console.error('Gemini error:', err.message)
+    console.error('Gemini analyze error:', err.message)
     res.status(500).json({ error: 'AI analysis failed: ' + err.message })
   }
 })
 
 router.delete('/:id', async (req, res) => {
   const { error } = await supabase
-    .from('modules')
-    .delete()
-    .eq('id', req.params.id)
-    .eq('device_id', req.deviceId)
+    .from('modules').delete().eq('id', req.params.id).eq('device_id', req.deviceId)
   if (error) return res.status(500).json({ error: error.message })
   res.json({ success: true })
 })

@@ -1,5 +1,8 @@
 [build]
 builder = "nixpacks"
 
+[build.nixpacksPlan.phases.setup]
+nixPkgs = ["nodejs_20"]
+
 [deploy]
 startCommand = "node src/index.js"

@@ -1,18 +1,22 @@
 {
-  "name": "studyos-backend",
-  "version": "2.0.0",
+  "name": "zeno-backend",
+  "version": "3.0.0",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "dependencies": {
     "@google/generative-ai": "^0.15.0",
     "@supabase/supabase-js": "^2.44.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "date-fns": "^3.6.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

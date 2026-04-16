@@ -2,11 +2,11 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 
-import profileRoutes  from '../routes/profile.js'
-import moduleRoutes   from '../routes/modules.js'
-import planRoutes     from '../routes/plan.js'
-import slotRoutes     from '../routes/slots.js'
-import sessionRoutes  from '../routes/sessions.js'
+import profileRoutes from './routes/profile.js'
+import moduleRoutes from './routes/modules.js'
+import planRoutes from './routes/plan.js'
+import slotRoutes from './routes/slots.js'
+import sessionRoutes from './routes/sessions.js'
 
 const app  = express()
 const PORT = process.env.PORT || 3001

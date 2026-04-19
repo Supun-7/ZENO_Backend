@@ -17,8 +17,16 @@ router.get('/', async (req, res) => {
 })
 
 router.post('/', async (req, res) => {
-  const { name, credits, midMark, midWeight, confidenceRating, overviewText, color, displayOrder } = req.body
+  const {
+    name, credits, midMark, midWeight,
+    confidenceRating, overviewText, color, displayOrder,
+    assessments
+  } = req.body
+
   if (!name?.trim()) return res.status(400).json({ error: 'Module name required' })
+
+  // Validate assessments if provided
+  const validatedAssessments = validateAssessments(assessments)
 
   const { data, error } = await supabase
     .from('modules')
@@ -31,7 +39,8 @@ router.post('/', async (req, res) => {
       confidence_rating: parseInt(confidenceRating) || 3,
       overview_text:     overviewText?.trim() || null,
       color:             color || '#7C9E87',
-      display_order:     displayOrder || 0
+      display_order:     displayOrder || 0,
+      assessments:       validatedAssessments,
     })
     .select()
     .single()
@@ -41,11 +50,25 @@ router.post('/', async (req, res) => {
 })
 
 router.patch('/:id', async (req, res) => {
-  const fields = { name:'name', credits:'credits', midMark:'mid_mark', midWeight:'mid_weight', confidenceRating:'confidence_rating', overviewText:'overview_text', color:'color' }
+  const fields = {
+    name:             'name',
+    credits:          'credits',
+    midMark:          'mid_mark',
+    midWeight:        'mid_weight',
+    confidenceRating: 'confidence_rating',
+    overviewText:     'overview_text',
+    color:            'color',
+  }
+
   const updates = {}
   Object.entries(fields).forEach(([k, dbk]) => {
     if (req.body[k] !== undefined) updates[dbk] = req.body[k]
   })
+
+  // Handle assessments separately with validation
+  if (req.body.assessments !== undefined) {
+    updates.assessments = validateAssessments(req.body.assessments)
+  }
 
   const { data, error } = await supabase
     .from('modules')
@@ -74,12 +97,14 @@ router.post('/:id/analyze', async (req, res) => {
 
   try {
     const result = await analyzeModuleOverview({
-      name: mod.name, credits: mod.credits,
-      midMark: mod.mid_mark, midWeight: mod.mid_weight,
+      name:             mod.name,
+      credits:          mod.credits,
+      midMark:          mod.mid_mark,
+      midWeight:        mod.mid_weight,
       confidenceRating: mod.confidence_rating,
-      overviewText: mod.overview_text,
-      targetGrade: profile?.target_grade || 'A',
-      weeksLeft
+      overviewText:     mod.overview_text,
+      targetGrade:      profile?.target_grade || 'A',
+      weeksLeft,
     })
 
     const { data: updated } = await supabase
@@ -101,5 +126,20 @@ router.delete('/:id', async (req, res) => {
   if (error) return res.status(500).json({ error: error.message })
   res.json({ success: true })
 })
+
+/* ─── Helper: validate and normalise assessments payload ─────────────────── */
+// assessments = { scored, outOf, weight, type } | null
+function validateAssessments(raw) {
+  if (!raw) return null
+  const scored = raw.scored != null && raw.scored !== '' ? parseFloat(raw.scored) : null
+  const outOf  = raw.outOf  != null && raw.outOf  !== '' ? parseFloat(raw.outOf)  : null
+  const weight = raw.weight != null && raw.weight !== '' ? parseFloat(raw.weight) : null
+  const type   = raw.type?.trim() || 'Project / Assignment'
+
+  // Only store if at least weight is set
+  if (weight == null) return null
+
+  return { scored, outOf, weight, type }
+}
 
 export default router
